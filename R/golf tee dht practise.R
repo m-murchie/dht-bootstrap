@@ -25,7 +25,7 @@ Region.Label <- rep(Region.Label, each=2)
 tee.data["Region.Label"] <- Region.Label
 
 ## bootstrap sample for tee data
-B <- 999
+B <- 1000
 region.strips <- unique(tee.data[tee.data$Region.Label==2,]$Sample.Label)
 strip.count <- length(region.strips)   # number of transects 
 N.hats <- NULL                                                    
@@ -36,15 +36,15 @@ for (i in 1:B) {
   for (j in 2:strip.count) {
     boot.sample <- rbind(boot.sample, tee.data[tee.data$Sample.Label==strip.sample[j],])
   }
-  tee.model <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance+exposure), 
+  tee.model <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance), 
                    data = boot.sample, meta.data=list(width=4))
   N.hats[i] <- summary(tee.model)["Nhat"]$Nhat
 }
 
-N## abundance estimate from original sample
-tee.model.orig <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance+exposure), 
-                      data = tee.data, meta.data=list(width=4))
-N.hats[1000] <- summary(tee.model.orig)["Nhat"]$Nhat
+## abundance estimate from original sample
+#tee.model.orig <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance), 
+#                      data = tee.data, meta.data=list(width=4))
+#N.hats[1000] <- summary(tee.model.orig)["Nhat"]$Nhat
 
 boot.mean.N <- mean(N.hats)   # mean of bootstrap abundance estimates
 boot.se.N <- sd(N.hats)   # estimate standard error from bootstrap estimates
