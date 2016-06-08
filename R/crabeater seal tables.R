@@ -128,9 +128,4 @@ crabseal <- read.csv("crabbieMRDS.csv")
 crabseal$Sample.Label <- as.numeric(crabseal$Sample.Label)   # number transects
 
 ## obtain crabeater seal tables
-crab.ddf.io <- ddf(method="io", dsmodel=~cds(key="hn"),
-                   mrmodel=~glm(link="logit", formula=~distance),
-                   data=crabseal, meta.data=list(width=700))
-summary(crab.ddf.io)
-
 tables <- checkdata(crabseal)

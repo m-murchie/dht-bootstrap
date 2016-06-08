@@ -3,31 +3,36 @@
 ## load mrds library and crabeaster seal data
 rm(list = ls())
 library(mrds)
-library(Distance)
 crabseal <- read.csv("crabbieMRDS.csv")
 crabseal$Sample.Label <- as.numeric(crabseal$Sample.Label)   # number transects
 
-crab.ddf.io <- ddf(method="trial.fi",
+## detection function
+crab.ddf <- ddf(method="trial.fi",
                    mrmodel=~glm(link="logit", formula=~distance),
                    data=crabseal, meta.data=list(width=700))
-summary(crab.ddf.io)["Nhat"]$Nhat
 
+## estimate abundance and variance
+dht(region=tables$region.table, sample=tables$sample.table, obs=tables$obs.table,
+    model=crab.ddf, options=list(convert.units=0.001))
 
 ## bootstrap
-B <- 999
+B <- 100
 strip.count <- max(crabseal$Sample.Label)   # number of transects 
 N.hats <- NULL   
 
 for (i in 1:B) {
   strip.sample <- sample(1:strip.count, strip.count, replace=TRUE)
   boot.sample <- crabseal[crabseal$Sample.Label==strip.sample[1],]
+  dht.sample <- tables$sample.table[tables$sample.table$Sample.Label %in% strip.sample,]
   for (j in 2:strip.count) {
     boot.sample <- rbind(boot.sample, crabseal[crabseal$Sample.Label==strip.sample[j],])
   }
-  crab.ddf <- ddf(method="trial.fi",
+  boot.ddf <- ddf(method="trial.fi",
                   mrmodel=~glm(link="logit", formula=~distance),
                   data=boot.sample, meta.data=list(width=700))
-  N.hats[i] <- summary(crab.ddf)[9]$Nhat   # store abundance estimate
+  boot.dht <- dht(region=tables$region.table, sample=dht.sample, obs=tables$obs.table,
+                  model=boot.ddf, options=list(convert.units=0.001))
+  N.hats[i] <- boot.dht$cluster$N[1,2]   # store abundance estimate
 }
 
 # abundance of original data
