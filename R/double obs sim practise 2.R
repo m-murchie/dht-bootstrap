@@ -1,4 +1,4 @@
-#               --- DOUBLE OBSERVER DATA SIM FUNCTION: PRACTISE 1 ---
+#               --- DOUBLE OBSERVER DATA SIM FUNCTION: PRACTISE 2 ---
 
 ## load DSsim package and source double observer data sim function
 rm(list=ls())
@@ -43,6 +43,6 @@ ddf.analyses <- make.ddf.analysis.list(
 
 #---
 
-double.obs.sim(region, subjective.design, pop.description, detect.1, detect.2, 
-               ddf.analyses, plot=TRUE)
+tables <- double.obs.sim(region, subjective.design, pop.description, detect.1, detect.2, 
+                         ddf.analyses, plot=TRUE)
 

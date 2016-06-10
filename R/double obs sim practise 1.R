@@ -40,10 +40,10 @@ parallel.design <- make.design(transect.type = "Line",
 pop.description <- make.population.description(N = 100, 
                                                density.obj = pop.density, region = region, fixed.N = TRUE)
 
-## detectability for each observer and analyses object
-detect.1 <- make.detectability(key.function = "hn", scale.param = 25,
+## detectability for each observer and ddf analsyses
+detect.1 <- make.detectability(key.function = "hn", scale.param = 100,
                                truncation = 30)
-detect.2 <- make.detectability(key.function = "hn", scale.param = 15,
+detect.2 <- make.detectability(key.function = "hn", scale.param = 20,
                                truncation = 30)
 
 ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",
@@ -52,6 +52,6 @@ ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",
 
 #---
 
-double.obs.sim(region, parallel.design, pop.description, detect.1, detect.2, 
+tables <- double.obs.sim(region, parallel.design, pop.description, detect.1, detect.2, 
                ddf.analyses, plot=TRUE)
 

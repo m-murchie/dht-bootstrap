@@ -2,7 +2,7 @@
 
 rm(list = ls())
 
-boot <- function(data, B = 999, hist = FALSE, trunc) {
+boot <- function(data, B = 999, trunc) {
 # INPUTS:    data    dataframe containing data to be analysed, WITH Sample.Label
 #                    column of numeric values 
 #            B       number of bootstrap replicates
@@ -29,17 +29,6 @@ boot <- function(data, B = 999, hist = FALSE, trunc) {
                      mrmodel=~glm(link="logit", formula=~distance),
                      data=boot.sample, meta.data = list(width=trunc))
     N.hats[i] <- summary(ddf.model)["Nhat"]$Nhat   # store abundance estimate
-  }
-  
-  # abundance estimate of original sample 
-  ddf.model.orig <- ddf(method="trial.fi",
-                        mrmodel=~glm(link="logit", formula=~distance),
-                        data=data, meta.data = list(width=trunc))
-  N.hats[B+1] <- summary(ddf.model.orig)["Nhat"]$Nhat
-  
-  # histogram of abundance estimates
-  if (hist == TRUE) {
-    hist(N.hats)
   }
   
   # summary characteristics

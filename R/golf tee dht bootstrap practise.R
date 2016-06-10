@@ -24,9 +24,14 @@ Region.Label <- tee.obs$Region.Label
 Region.Label <- rep(Region.Label, each=2)
 tee.data["Region.Label"] <- Region.Label
 
+## estimates from original data
+tee.model <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance), 
+                 data = tee.data, meta.data=list(width=4))
+dht(tee.model, tee.region, tee.samples, tee.obs)
+
 ## bootstrap sample for tee data
-B <- 100
-region.strips <- unique(tee.data[tee.data$Region.Label==2,]$Sample.Label)
+B <- 999
+region.strips <- unique(tee.data[tee.data$Region.Label==1,]$Sample.Label)
 strip.count <- length(region.strips)   # number of transects 
 N.hats <- NULL                                                    
 
@@ -39,8 +44,8 @@ for (i in 1:B) {
   }
   tee.model <- ddf(method = 'trial.fi', mrmodel=~glm(link='logit', formula=~distance), 
                    data = boot.sample, meta.data=list(width=4))
-  boot.dht <- dht(tee.model, tee.region, dht.sample, tee.obs)
-  N.hats[i] <- boot.dht$clusters$N[1,2]
+# boot.dht <- dht(tee.model, tee.region, dht.sample, tee.obs)
+  N.hats[i] <- summary(tee.model)["Nhat"]$Nhat
 }
 
 boot.mean.N <- mean(N.hats)   # mean of bootstrap abundance estimates

@@ -3,6 +3,7 @@
 double.obs.sim <- function(region.obj, design.obj, pop.description.obj, detect.obj.1,
                            detect.obj.2, ddf.analyses.list, seed = 123456, 
                            plot=FALSE) {
+  
   set.seed(seed)
     
   ## simulation object and survery results for observer 1
@@ -34,11 +35,13 @@ double.obs.sim <- function(region.obj, design.obj, pop.description.obj, detect.o
       
   data <- data[rep(seq_len(nrow(data)), each=2),]
   detected <- c(rbind(det.1,det.2))
-  data <- cbind(data, detected)
-    
+
   ## tidy up data
   data <- subset(data, select=-c(x,y))
+  observer <- rep(1:2, length(all.objects))
+  data <- cbind(data["object"], observer, detected, data[,2:3])
   names(data)[names(data)=="transect.ID"] <- "Sample.Label"
+  
   obs.table <- obs.table[order(obs.table$Sample.Label),]
   region.table <- survey.results@region.table@region.table
   sample.table <- survey.results@sample.table@sample.table
