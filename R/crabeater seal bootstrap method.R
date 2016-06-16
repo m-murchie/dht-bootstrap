@@ -3,7 +3,7 @@
 ## load mrds library and crabeaster seal data
 rm(list = ls())
 library(mrds)
-crabseal <- read.csv("crabbieMRDS.csv")
+crabseal <- read.csv("data/crabbieMRDS.csv")
 crabseal$Sample.Label <- as.numeric(crabseal$Sample.Label)   # number transects
 
 ## detection function

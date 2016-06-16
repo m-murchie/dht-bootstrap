@@ -124,7 +124,7 @@ checkdata<-function(data, region.table=NULL, sample.table=NULL, obs.table=NULL,
 
 ## load mrds package and data
 library(mrds)
-crabseal <- read.csv("crabbieMRDS.csv")
+crabseal <- read.csv("data/crabbieMRDS.csv")
 crabseal$Sample.Label <- as.numeric(crabseal$Sample.Label)   # number transects
 
 ## obtain crabeater seal tables
