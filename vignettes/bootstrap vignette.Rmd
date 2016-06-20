@@ -1,0 +1,122 @@
+---
+title: Investigating variance estimation via the bootstrap for simulated double observer data
+author: "Matthew Murchie"
+date: "17 June 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Variance estimation of abundance is a key component in distance sampling. The uncertainty associated with abundance estimates is affected by two main components:
+   
+1. *Detection function*, variation due to estimating the parameters of the      detection function.
+2. *Encounter rate*, variation in the number of animals observed if we were to repeat our survey.
+   
+The ```dht``` function, found in the package ```mrds```, calculates the first component listed above using the delta method and the second compenent using one of three methods. See ```?dht``` for further details.   
+To investigate variance estimation via the bootstrap, compared to methods currently implemented in ```dht```, we will consider three factors: the number of transects used in the survey design, the number of animals in the survey region and the distribution/density of animals.   
+In order to analyse the performance of the bootstrap it is necessary to simulate double observer data, where the true abundance and detection function is known.
+
+## Simulating double observer data [^1]
+
+### Region object
+We begin by creating a region object. For simiplicity, we will consider a square survey region with a total area of 1km2.
+Using the ```DSsim``` (Marshall 2014) library in R, you can specify the coordinates of the survey region and any areas to be excluded.
+
+```{r region, message=FALSE}
+library(DSsim)
+
+coords <- gaps <- list()
+coords[[1]] <- list(data.frame(x = c(0,1000,1000,0,0), y = c(0,0,1000,1000,0)))
+gaps[[1]] <- list(data.frame(x = c(0,0,0,0,0), y = c(0,0,0,0,0)))
+
+# create region object
+region <- make.region(region.name = "study.area", units = "m",
+                      coords = coords, gaps = gaps)
+```
+
+### Density object
+Next we create a density object by specifying a grid with a constant density, adding hotspots accordingly.
+```{r density}
+pop.density <- make.density(region.obj = region, x.space = 10,
+                            y.space = 10, constant = 0.5)
+pop.density <- add.hotspot(pop.density, centre = c(250, 250),
+                           sigma = 500, amplitude = 0.2)
+pop.density <- add.hotspot(pop.density, centre = c(250, 750),
+                           sigma = 500, amplitude = 0.2)
+pop.density <- add.hotspot(pop.density, centre = c(750, 250),
+                           sigma = 500, amplitude = 0.2)
+pop.density <- add.hotspot(pop.density, centre = c(750, 750),
+                           sigma = 500, amplitude = 0.2)
+```
+
+### Survey Design object
+The transects are first generated as shapefiles using the ```write.transects``` function [^2], which are then saved to a specified directory.     
+Note that you will need to save ```write.transects``` as a file and use ```source``` to read the function into R. 
+
+``` {r write.transects, include=FALSE}
+source("C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/R/write.transects.R")
+```
+
+``` {r source eg, eval=FALSE}
+# specify write.transects path directory
+source("C:/...")
+```
+
+Here we generate three horizontal transects that span the length of the survey region. By changing the x and y coordinates and the number of sequence replicates, you can specify the number of transects together with their location.   
+The shapefiles are saved to the *shapes* folder in the working directory. The ```unlink``` function used below ensures the shapefile directory is always empty.
+
+``` {r transects, warning=FALSE}
+n_segs <- 2
+lines.many <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 3)),
+                         y   = c(seq(250, 250, len=n_segs),
+                                 seq(500, 500, len=n_segs),
+                                 seq(750, 750, len=n_segs)),
+                         leg = c(rep("1", n_segs),
+                                 rep("2", n_segs),
+                                 rep("3", n_segs)))
+
+unlink("shapes/*")
+write.transects(lines.many, "shapes")
+```
+
+Having generated and saved the shapefiles, we supply the ```make.design``` function with the path to the *shapes* folder to create the survey design object. 
+``` {r shapefile directory, include=FALSE}
+shapefile.pathway <- "C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/shapes"
+```
+
+``` {r shapefile eg, eval=FALSE}
+# specify path to shapes folder
+shapefile.pathway <- "C:/..."
+```
+
+``` {r survey design}
+survey.design <- make.design(transect.type = "Line",
+                             design.details = c("Parallel","Systematic"), 
+                             region = region, plus.sampling =FALSE, 
+                             path = shapefile.pathway)
+```
+
+### Abundance
+Here we will fix the true abundance of animals to be 500. It is important to specify the argument ```fixed.N = TRUE```, when using the ```make.population.description``` function, to ensure this exact population size is generated with each realisation.
+
+``` {r abundance}
+pop.description <- make.population.description(N = 500, density.obj = pop.density,
+                                               region = region, fixed.N = TRUE)
+```
+
+### Analyses object
+
+The analyses object describes the model to be fitted to the distance data. Below we propose half-normal and hazard-rate models, using AIC to choose between them.
+
+``` {r analyses}
+ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = ~1),
+                                                      ~cds(key = "hr", formula = ~1)),
+                                       method = "ds", criteria = "AIC", truncation = 30)
+```
+
+[^1]: Adapted from the vignette by Laura Marshall:   
+      http://www.creem.st-and.ac.uk/DS.M&A/simulation/DSsimstudy.html#directory-structure-for-files-in-this-project
+[^2]: write.transects() function by David Miller:   
+      https://github.com/dill/spatlaugh/blob/master/write_transects.R
