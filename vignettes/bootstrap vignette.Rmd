@@ -14,18 +14,18 @@ Variance estimation of abundance is a key component in distance sampling. The un
 1. *Detection function*, variation due to estimating the parameters of the      detection function.
 2. *Encounter rate*, variation in the number of animals observed if we were to repeat our survey.
    
-The ```dht``` function, found in the package ```mrds```, calculates the first component listed above using the delta method and the second compenent using one of three methods. See ```?dht``` for further details.   
-To investigate variance estimation via the bootstrap, compared to methods currently implemented in ```dht```, we will consider three factors: the number of transects used in the survey design, the number of animals in the survey region and the distribution/density of animals.   
+The ```dht``` function, found in the package ```mrds```, calculates the first component listed above using the delta method and the second component using one of three methods. See ```?dht``` for further details.   
 In order to analyse the performance of the bootstrap it is necessary to simulate double observer data, where the true abundance and detection function is known.
 
 ## Simulating double observer data [^1]
 
-### Region object
-We begin by creating a region object. For simiplicity, we will consider a square survey region with a total area of 1km2.
+### Region 
+We begin by creating a region object. For simplicity, we will consider a square survey region with a total area of 1km2.
 Using the ```DSsim``` (Marshall 2014) library in R, you can specify the coordinates of the survey region and any areas to be excluded.
 
 ```{r region, message=FALSE}
 library(DSsim)
+library(knitr)
 
 coords <- gaps <- list()
 coords[[1]] <- list(data.frame(x = c(0,1000,1000,0,0), y = c(0,0,1000,1000,0)))
@@ -36,22 +36,16 @@ region <- make.region(region.name = "study.area", units = "m",
                       coords = coords, gaps = gaps)
 ```
 
-### Density object
+### Density 
 Next we create a density object by specifying a grid with a constant density, adding hotspots accordingly.
 ```{r density}
 pop.density <- make.density(region.obj = region, x.space = 10,
                             y.space = 10, constant = 0.5)
-pop.density <- add.hotspot(pop.density, centre = c(250, 250),
-                           sigma = 500, amplitude = 0.2)
-pop.density <- add.hotspot(pop.density, centre = c(250, 750),
-                           sigma = 500, amplitude = 0.2)
-pop.density <- add.hotspot(pop.density, centre = c(750, 250),
-                           sigma = 500, amplitude = 0.2)
-pop.density <- add.hotspot(pop.density, centre = c(750, 750),
-                           sigma = 500, amplitude = 0.2)
+pop.density<- add.hotspot(pop.density, centre = c(500, 500),
+                          sigma = 1000, amplitude = 0.2)
 ```
 
-### Survey Design object
+### Survey Design 
 The transects are first generated as shapefiles using the ```write.transects``` function [^2], which are then saved to a specified directory.     
 Note that you will need to save ```write.transects``` as a file and use ```source``` to read the function into R. 
 
@@ -59,42 +53,49 @@ Note that you will need to save ```write.transects``` as a file and use ```sourc
 source("C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/R/write.transects.R")
 ```
 
-``` {r source eg, eval=FALSE}
+``` {r write.transects eg, eval=FALSE}
 # specify write.transects path directory
 source("C:/...")
 ```
 
-Here we generate three horizontal transects that span the length of the survey region. By changing the x and y coordinates and the number of sequence replicates, you can specify the number of transects together with their location.   
-The shapefiles are saved to the *shapes* folder in the working directory. The ```unlink``` function used below ensures the shapefile directory is always empty.
+Here we generate three horizontal transects that span the length of the survey region. By changing the x and y coordinates and the number of sequence replicates, you can specify the number of transects together with their location.
 
-``` {r transects, warning=FALSE}
+``` {r transects}
 n_segs <- 2
-lines.many <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 3)),
-                         y   = c(seq(250, 250, len=n_segs),
-                                 seq(500, 500, len=n_segs),
-                                 seq(750, 750, len=n_segs)),
+lines.many <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 4)),
+                         y   = c(seq(200, 200, len=n_segs),
+                                 seq(400, 400, len=n_segs),
+                                 seq(600, 600, len=n_segs),
+                                 seq(800, 800, len=n_segs)),
                          leg = c(rep("1", n_segs),
                                  rep("2", n_segs),
-                                 rep("3", n_segs)))
-
-unlink("shapes/*")
-write.transects(lines.many, "shapes")
+                                 rep("3", n_segs),
+                                 rep("4", n_segs)))
 ```
 
-Having generated and saved the shapefiles, we supply the ```make.design``` function with the path to the *shapes* folder to create the survey design object. 
+Before the survey shapefiles can be generated, you will need to create an empty folder called *shapes* where the shapefiles can be saved. The object ```shapefile.pathway``` specifies the location of this folder.   
+Ignore the warning message from ```write.transects```. Here I have used the ```unlink``` function to ensure the *shapes* folder is empty. To check the shapefiles have been generated simply open the *shapes* folder, where you should find three new files.
+
 ``` {r shapefile directory, include=FALSE}
 shapefile.pathway <- "C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/shapes"
 ```
 
 ``` {r shapefile eg, eval=FALSE}
 # specify path to shapes folder
-shapefile.pathway <- "C:/..."
+shapefile.pathway <- "C:/.../shapes"
 ```
+
+``` {r write transects, warning=FALSE}
+unlink(shapefile.pathway, recursive = TRUE)
+write.transects(lines.many, shapefile.pathway)
+```
+
+Having generated and saved the shapefiles, we supply the ```make.design``` function with the path to the *shapes* folder to create the survey design object. 
 
 ``` {r survey design}
 survey.design <- make.design(transect.type = "Line",
                              design.details = c("Parallel","Systematic"), 
-                             region = region, plus.sampling =FALSE, 
+                             region = region, plus.sampling = FALSE, 
                              path = shapefile.pathway)
 ```
 
@@ -106,7 +107,7 @@ pop.description <- make.population.description(N = 500, density.obj = pop.densit
                                                region = region, fixed.N = TRUE)
 ```
 
-### Analyses object
+### Analyses 
 
 The analyses object describes the model to be fitted to the distance data. Below we propose half-normal and hazard-rate models, using AIC to choose between them.
 
@@ -116,7 +117,384 @@ ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = 
                                        method = "ds", criteria = "AIC", truncation = 30)
 ```
 
+### Detection function
+
+As we are simulating double observer data, we need to specify different detection functions for both observers. In both cases we select a half-normal detection function, adjusting the scale parameters associated with each.
+
+``` {r det function}
+detect.1 <- make.detectability(key.function = "hn", scale.param = 20,
+                               truncation = 30)
+
+detect.2 <- make.detectability(key.function = "hn", scale.param = 5,
+                               truncation = 30)
+```
+
+### Simulation
+
+Now we are in a position to simulate double observer data. Using the ```double.obs.sim``` function [^3], we pull together all the survey objects created above.
+If ```plot=TRUE```, you can simulate the detection process for each observer.
+
+``` {r double.obs.sim, include=FALSE}
+source("C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/R/double.obs.sim.R")
+```
+
+``` {r double.obs.sim eg, eval=FALSE}
+# specify write.transects path directory
+source("C:/...")
+```
+
+``` {r simulation, fig.width=10, fig.height=4}
+# two plots in window
+par(mfrow=c(1,2))
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, plot=TRUE)
+```
+
+``` {r window options, include=FALSE}
+par(mfrow=c(1,1))
+```
+
+## Variance estimation via the bootstrap
+To investigate variance estimation via the bootstrap, compared to methods currently implemented in ```dht```, we will consider three factors:   
+
+1. the number of transects used in the survey design, 
+2. the number of animals in the survey region (abundance) and 
+3. the distribution/density of animals.  
+
+The survey region and design will be the same as simulated above, with changes being made to the factor in question.
+
+### Survey design
+We will consider survey designs of 3, 9 and 15 transects in total. For brevity, I omit the code used to generate the transects - the approach is the same as above.   
+The plots given below represent each survey design.
+
+```{r transect plots, echo=FALSE, fig.width=10, fig.height=4}
+par(mfrow=c(1,3))
+
+plot(region)
+abline(h=c(250,500,750), col = 4, lwd = 2)
+
+plot(region)
+abline(h=seq(100,900,100), col = 4, lwd = 2)
+
+plot(region)
+abline(h=seq(62.5,937.5,62.5), col = 4, lwd = 2)
+```
+
+Below are the results for the survey design with only three transects.
+
+``` {r three transects, echo=FALSE, warning=FALSE}
+n_segs <- 2
+
+source("C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_variance_estimation/R/bootstrap function.R")
+
+detect.1 <- make.detectability(key.function = "hn", scale.param = 50,
+                               truncation = 30)
+
+detect.2 <- make.detectability(key.function = "hn", scale.param = 40,
+                               truncation = 30)
+
+# three transects
+lines.low <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 3)),
+                        y   = c(seq(250, 250, len=n_segs),
+                                seq(500, 500, len=n_segs),
+                                seq(750, 750, len=n_segs)),
+                        leg = c(rep("1", n_segs),
+                                rep("2", n_segs),
+                                rep("3", n_segs)))
+
+unlink(shapefile.pathway, recursive = TRUE)
+write.transects(lines.low, shapefile.pathway)
+
+survey.design <- make.design(transect.type = "Line",
+                             design.details = c("Parallel","Systematic"), 
+                             region = region, plus.sampling = FALSE, 
+                             path = shapefile.pathway)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+
+```
+
+Below are the results for the survey design with nine transects.
+
+``` {r nine transects, echo=FALSE, warning=FALSE}
+# nine transects
+lines.med <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 9)),
+                        y   = c(seq(100, 100, len=n_segs),
+                                seq(200, 200, len=n_segs),
+                                seq(300, 300, len=n_segs),
+                                seq(400, 400, len=n_segs),
+                                seq(500, 500, len=n_segs),
+                                seq(600, 600, len=n_segs),
+                                seq(700, 700, len=n_segs),
+                                seq(800, 800, len=n_segs),
+                                seq(900, 900, len=n_segs)),
+                        leg = c(rep("1", n_segs),
+                                rep("2", n_segs),
+                                rep("3", n_segs),
+                                rep("4", n_segs),
+                                rep("5", n_segs),
+                                rep("6", n_segs),
+                                rep("7", n_segs),
+                                rep("8", n_segs),
+                                rep("9", n_segs)))
+
+unlink(shapefile.pathway, recursive = TRUE)
+write.transects(lines.med, shapefile.pathway)
+
+survey.design <- make.design(transect.type = "Line",
+                             design.details = c("Parallel","Systematic"), 
+                             region = region, plus.sampling = FALSE, 
+                             path = shapefile.pathway)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+
+```
+
+Below are the results for the survey design with fifteen transects.
+
+``` {r fifteen transects, echo=FALSE, warning=FALSE}
+# fifteen transects
+lines.high <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 15)),
+                         y   = c(seq(62.5, 62.5, len=n_segs),
+                                 seq(125, 125, len=n_segs),
+                                 seq(187.5, 187.5, len=n_segs),
+                                 seq(250, 250, len=n_segs),
+                                 seq(312.5, 312.5, len=n_segs),
+                                 seq(375, 375, len=n_segs),
+                                 seq(437.5, 437.5, len=n_segs),
+                                 seq(500, 500, len=n_segs),
+                                 seq(562.5, 562.5, len=n_segs),
+                                 seq(625, 625, len=n_segs),
+                                 seq(687.5, 687.5, len=n_segs),
+                                 seq(750, 750, len=n_segs),
+                                 seq(812.5, 812.5, len=n_segs),
+                                 seq(875, 875, len=n_segs),
+                                 seq(937.5, 937.5, len=n_segs)),
+                         leg = c(rep("1", n_segs),
+                                 rep("2", n_segs),
+                                 rep("3", n_segs),
+                                 rep("4", n_segs),
+                                 rep("5", n_segs),
+                                 rep("6", n_segs),
+                                 rep("7", n_segs),
+                                 rep("8", n_segs),
+                                 rep("9", n_segs),
+                                 rep("10", n_segs),
+                                 rep("11", n_segs),
+                                 rep("12", n_segs),
+                                 rep("13", n_segs),
+                                 rep("14", n_segs),
+                                 rep("15", n_segs)))
+
+unlink(shapefile.pathway, recursive = TRUE)
+write.transects(lines.high, shapefile.pathway)
+
+survey.design <- make.design(transect.type = "Line",
+                             design.details = c("Parallel","Systematic"), 
+                             region = region, plus.sampling = FALSE, 
+                             path = shapefile.pathway)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+
+```
+
+### Abundance
+
+True abundance of 20 animals.
+
+``` {r 20 animals, echo=FALSE, warning=FALSE}
+lines.med <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 9)),
+                        y   = c(seq(100, 100, len=n_segs),
+                                seq(200, 200, len=n_segs),
+                                seq(300, 300, len=n_segs),
+                                seq(400, 400, len=n_segs),
+                                seq(500, 500, len=n_segs),
+                                seq(600, 600, len=n_segs),
+                                seq(700, 700, len=n_segs),
+                                seq(800, 800, len=n_segs),
+                                seq(900, 900, len=n_segs)),
+                        leg = c(rep("1", n_segs),
+                                rep("2", n_segs),
+                                rep("3", n_segs),
+                                rep("4", n_segs),
+                                rep("5", n_segs),
+                                rep("6", n_segs),
+                                rep("7", n_segs),
+                                rep("8", n_segs),
+                                rep("9", n_segs)))
+
+unlink(shapefile.pathway, recursive = TRUE)
+write.transects(lines.med, shapefile.pathway)
+
+survey.design <- make.design(transect.type = "Line",
+                             design.details = c("Parallel","Systematic"), 
+                             region = region, plus.sampling = FALSE, 
+                             path = shapefile.pathway)
+
+pop.description <- make.population.description(N = 20, density.obj = pop.density,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+
+```
+
+True abundance of 500 animals
+
+``` {r 500 animals, echo=FALSE}
+pop.description <- make.population.description(N = 500, density.obj = pop.density,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+```
+
+True abundance of 2000 animals
+
+``` {r 2000 animals, echo=FALSE}
+pop.description <- make.population.description(N = 2000, density.obj = pop.density,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+```
+
+### Density
+
+We will consider three density surfaces describing the distribution of animals within the survey region. The plots are shown below.
+
+``` {r density plots, echo=FALSE, fig.width=10, fig.height=4}
+par(mfrow=c(1,3))
+
+pop.density.centre <- make.density(region.obj = region, x.space = 10,
+                                   y.space = 10, constant = 0.5)
+pop.density.centre <- add.hotspot(pop.density.centre, centre = c(500, 500),
+                                  sigma = 1000, amplitude = 0.2)
+
+
+pop.density.west <- make.density(region.obj = region, x.space = 10,
+                                 y.space = 10, constant = 0.5)
+pop.density.west <- add.hotspot(pop.density.west, centre = c(200, 500),
+                                sigma = 250, amplitude = 2)
+
+
+pop.density.cluster <- make.density(region.obj = region, x.space = 10,
+                                    y.space = 10, constant = 0.5)
+pop.density.cluster <- add.hotspot(pop.density.cluster, centre = c(250, 250),
+                                   sigma = 100, amplitude = 2)
+pop.density.cluster <- add.hotspot(pop.density.cluster, centre = c(750, 750),
+                                   sigma = 100, amplitude = 2)
+
+
+plot(pop.density.centre)
+plot(pop.density.west)
+plot(pop.density.cluster)
+
+par(mfrow=c(1,1))
+```
+
+Centre
+
+``` {r centre density, echo=FALSE}
+pop.description <- make.population.description(N = 500, density.obj = pop.density.centre,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+```
+
+West
+
+``` {r west density, echo=FALSE}
+pop.description <- make.population.description(N = 500, density.obj = pop.density.west,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+```
+
+Cluster
+
+``` {r cluster density, echo=FALSE}
+pop.description <- make.population.description(N = 500, density.obj = pop.density.cluster,
+                                               region = region, fixed.N = TRUE)
+
+tables <- double.obs.sim(region, survey.design, pop.description, detect.1,
+                         detect.2, ddf.analyses, seed = 999)
+
+tables$data["Region.Label"] <- rep("study.area", length(tables$data$object))
+
+
+results <- boot.dht(tables, B=49, trunc=30)
+results.df <- rbind(results$original, results$bootstrap)
+kable(results.df)
+```
+
 [^1]: Adapted from the vignette by Laura Marshall:   
       http://www.creem.st-and.ac.uk/DS.M&A/simulation/DSsimstudy.html#directory-structure-for-files-in-this-project
+      
 [^2]: write.transects() function by David Miller:   
       https://github.com/dill/spatlaugh/blob/master/write_transects.R
+      
+[^3]: double.obs.sim() function:   
+      https://github.com/m-murchie/dht-bootstrap/blob/master/R/double.obs.sim.R
