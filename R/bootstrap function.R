@@ -10,9 +10,14 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
 # OUTPUTS:   summary table for bootstrap abundance estimates
 #            histogram of abundance estimates and encounter rates, if hist = TRUE
 # FUNCTIONS: ddf
-  if (!("Sample.Label" %in% names(tables$data))) {
-    stop("Data must contain Sample.Label column to execute bootstrap")
+  
+  
+  if (!("Sample.Label" %in% names(tables$data)) | 
+      !("Region.Label" %in% names(tables$data))) {
+        stop("Data must contain Sample.Label and Region.Label column 
+             to execute bootstrap")
   }
+  
   
   # bootstrap estimates of abundance
   lines <- unique(tables$obs.table$Sample.Label)
@@ -20,36 +25,46 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
   e.rates <- NULL   # encounter rates  
   N.hats <- NULL   # abundance estimates
   
+  
   for (i in 1:B) {
     line.sample <- sample(lines, lines.count, replace=TRUE)
     boot.data <- tables$data[tables$data$Sample.Label==line.sample[1],]
-    boot.sample <- tables$sample.table[tables$sample.table$Sample.Label==
-                                         line.sample[1],]
+    boot.data$Sample.Label <- rep(1, length(boot.data$Sample.Label))
+    boot.sample.table <- tables$sample.table[tables$sample.table$Sample.Label
+                                             ==line.sample[1],]
+  
     for (j in 2:lines.count) {
-      boot.data <- rbind(boot.data, tables$data[tables$data$Sample.Label
-                                                ==line.sample[j],])
-      boot.sample <- rbind(boot.sample, tables$sample.table
-                           [tables$sample.table$Sample.Label==line.sample[j],])
+      line.data <- tables$data[tables$data$Sample.Label==line.sample[j],]
+      line.data$Sample.Label <- rep(j, length(line.data$Sample.Label))
+      boot.data <- rbind(boot.data, line.data)
+      boot.sample.table <- rbind(boot.sample.table, 
+                                 tables$sample.table[tables$sample.table$
+                                                     Sample.Label==line.sample[j],])
     }
+  
+    boot.objects <- c(1:(length(boot.data$object)*0.5))
+    boot.objects <- rep(boot.objects, each=2)
+    boot.data$object <- boot.objects
+    boot.sample.table$Sample.Label <- c(1:lines.count)
+    
     boot.ddf <- ddf(method = 'io.fi', mrmodel=~glm(link='logit', formula=~distance), 
                     data = boot.data, meta.data=list(width=trunc))
-    boot.effort <- sum(boot.sample$Effort)
-    covered.area <- 2*boot.effort*trunc
-    region.area <- tables$region.table$Area
-    N.hats[i] <- boot.ddf$Nhat*region.area/covered.area
+    boot.dht <- dht(boot.ddf, tables$region.table, boot.sample.table, 
+                    subset=1==1)
+    
+    boot.effort <- boot.dht$individuals$summary$Effort
+    N.hats[i] <- boot.dht$individuals$N$Estimate
     e.rates[i] <- summary(boot.ddf)$n/boot.effort
   }
   
   
   # original data
-  original.effort <- sum(tables$sample.table$Effort)
   original.ddf <- ddf(method = 'io.fi', mrmodel=~glm(link='logit', 
-                                                     formula=~distance), 
-                      data = boot.data, meta.data=list(width=trunc))
-  dht.results <- dht(original.ddf, tables$region.table, tables$sample.table, 
+                                                     formula=~distance),
+                      data = tables$data, meta.data=list(width=trunc))
+  original.dht <- dht(original.ddf, tables$region.table, tables$sample.table, 
                      tables$obs.table)
-  N.hats[B+1] <- dht.results$individuals$N$Estimate[[1]]
-  e.rates[B+1] <- summary(original.ddf)$n/original.effort
+  N.hats[B+1] <- original.dht$individuals$N$Estimate
   
   
   # summary characteristics
@@ -69,14 +84,22 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
   
   
   # results
-  result <- data.frame(Estimate = boot.mean,
-                       SE       = boot.se,
-                       CV       = boot.cv,
-                       lcl      = N.hats[(B+1)*0.025],
-                       ucl      = N.hats[(B+1)*0.975])
-  rownames(result) <- c("Bootstrap")
+  boot.result <- data.frame(Method   = "Bootstrap",
+                            Label    = "Total",
+                            Estimate = boot.mean,
+                            se       = boot.se,
+                            cv       = boot.cv,
+                            lcl      = N.hats[(B+1)*0.025],
+                            ucl      = N.hats[(B+1)*0.975])
   
+  original.result <- original.dht$individuals$N
+  original.result <- cbind(Method = "Original", original.result[1:6])
+  
+  result <- list(original  = original.result,
+                 bootstrap = boot.result)
+
   return(result)
+
 }
 
 

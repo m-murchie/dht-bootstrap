@@ -39,12 +39,11 @@ survey.design <- make.design(transect.type = "Line",
 ## density object
 pop.density <- make.density(region.obj = region, x.space = 10,
                             y.space = 10, constant = 0.5)
-pop.density <- add.hotspot(pop.density, centre = c(50, 200),
-                           sigma = 100, amplitude = 0.1)
-pop.density <- add.hotspot(pop.density, centre = c(500, 700),
-                           sigma = 900, amplitude = 0.05)
-pop.density <- add.hotspot(pop.density, centre = c(300, 100),
-                           sigma = 100, amplitude = -0.15)
+pop.density <- add.hotspot(pop.density, centre = c(250, 500),
+                           sigma = 100, amplitude = 0.2)
+pop.density <- add.hotspot(pop.density, centre = c(750, 250),
+                           sigma = 100, amplitude = 0.2)
+
 
 
 ## population description
@@ -58,7 +57,8 @@ detect <- make.detectability(key.function = "hn", scale.param = 15,
 
 ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = ~1),
                                                       ~cds(key = "hr", formula = ~1)),
-                                       method = "ds", criteria = "AIC")
+                                       method = "ds", criteria = "AIC", 
+                                       truncation = 30)
 
 my.simulation <- make.simulation(reps = 10, single.transect.set = TRUE,
                                  region.obj = region, design.obj = survey.design,
