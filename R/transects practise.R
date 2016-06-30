@@ -33,7 +33,7 @@ shapefile.pathway <- "C:/Users/Matthew/Documents/SUMMER SCHOOL/MRDS_bootstrap_va
 
 survey.design <- make.design(transect.type = "Line",
                              design.details = c("user specified"), region = region,
-                             plus.sampling =FALSE, path = shapefile.pathway)
+                             plus.sampling = FALSE, path = shapefile.pathway)
 
 
 ## density object
@@ -53,10 +53,9 @@ pop.description <- make.population.description(N = 500, density.obj = pop.densit
 
 ## detectability and ddf analsyses
 detect <- make.detectability(key.function = "hn", scale.param = 15,
-                             truncation = 30)
+                             truncation = 15)
 
-ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = ~1),
-                                                      ~cds(key = "hr", formula = ~1)),
+ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = ~1)),
                                        method = "ds", criteria = "AIC", 
                                        truncation = 30)
 
@@ -123,17 +122,9 @@ plot(survey.results)
 
 
 ## transects and survey design
-n_segs <- 2
-lines <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 4)),
-                    y   = c(seq(200, 200, len=n_segs),
-                            seq(400, 400, len=n_segs),
-                            seq(600, 600, len=n_segs),
-                            seq(800, 800, len=n_segs)),
-                    leg = c(rep("1", n_segs),
-                            rep("2", n_segs),
-                            rep("3", n_segs),
-                            rep("4", n_segs)))
+source("R/create.transects.R")
 
+lines <- create.transects(n=20)
 
 unlink("shapes/*")
 write.transects(lines, "shapes")
@@ -155,46 +146,4 @@ plot(survey.results)
 
 
 #---
-
-
-## transects and survey design
-n_segs <- 2
-lines.many <- data.frame(x   = c(rep(seq(0, 1000, len=n_segs), 9)),
-                         y   = c(seq(100, 100, len=n_segs),
-                                 seq(200, 200, len=n_segs),
-                                 seq(300, 300, len=n_segs),
-                                 seq(400, 400, len=n_segs),
-                                 seq(500, 500, len=n_segs),
-                                 seq(600, 600, len=n_segs),
-                                 seq(700, 700, len=n_segs),
-                                 seq(800, 800, len=n_segs),
-                                 seq(900, 900, len=n_segs)),
-                         leg = c(rep("1", n_segs),
-                                 rep("2", n_segs),
-                                 rep("3", n_segs),
-                                 rep("4", n_segs),
-                                 rep("5", n_segs),
-                                 rep("6", n_segs),
-                                 rep("7", n_segs),
-                                 rep("8", n_segs),
-                                 rep("9", n_segs)))
-
-                         
-unlink("shapes/*")
-write.transects(lines.many, "shapes")
-survey.design <- make.design(transect.type = "Line",
-                             design.details = c("Parallel","Systematic"), region = region,
-                             plus.sampling =FALSE, path = shapefile.pathway)
-
-
-## results
-my.simulation <- make.simulation(reps = 10, single.transect.set = TRUE,
-                                 region.obj = region, design.obj = survey.design,
-                                 population.description.obj = pop.description,
-                                 detectability.obj = detect, ddf.analyses.list = ddf.analyses)
-
-survey.results <- create.survey.results(my.simulation, dht.table = TRUE)
-
-plot(survey.results)
-
 

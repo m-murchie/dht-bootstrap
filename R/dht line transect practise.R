@@ -2,10 +2,10 @@ source("R/double.obs.sim.R")
 source("R/bootstrap function.R")
 
 
-detect.1 <- make.detectability(key.function = "hn", scale.param = 50,
+detect.1 <- make.detectability(key.function = "hn", scale.param = 20,
                                truncation = 30)
 
-detect.2 <- make.detectability(key.function = "hn", scale.param = 40,
+detect.2 <- make.detectability(key.function = "hn", scale.param = 15,
                                truncation = 30)
 
 tables <- double.obs.sim(region, survey.design, pop.description, detect.1, detect.2, 
@@ -20,4 +20,4 @@ dht.results <- dht(ddf.model, tables$region.table, tables$sample.table,
                    tables$obs.table)
 
 
-boot.dht(tables, trunc=30, hist=TRUE)
+results <- boot.dht(tables, B=49, trunc=30)
