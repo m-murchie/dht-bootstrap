@@ -9,7 +9,7 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
 #            trunc   truncation distance, necessary for meta.data 
 # OUTPUTS:   summary table for bootstrap abundance estimates
 #            histogram of abundance estimates and encounter rates, if hist = TRUE
-# FUNCTIONS: ddf
+# FUNCTIONS: ddf, dht
   
   
   if (!("Sample.Label" %in% names(tables$data)) | 
@@ -20,7 +20,7 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
   
   
   # bootstrap estimates of abundance
-  lines <- unique(tables$obs.table$Sample.Label)
+  lines <- unique(tables$sample.table$Sample.Label)
   lines.count <- length(lines)   # number of transects
   e.rates <- vector(length = B)   # encounter rates  
   N.hats <- vector(length = B)   # abundance estimates
@@ -72,7 +72,7 @@ boot.dht <- function(tables, B = 999, trunc, hist = FALSE) {
                                                      formula=~distance*observer),
                       data = tables$data, meta.data=list(width=trunc))
   original.dht <- dht(original.ddf, tables$region.table, tables$sample.table, 
-                     tables$obs.table)
+                     subset=1==1)
   N.hats[B+1] <- original.dht$individuals$N$Estimate
   
   

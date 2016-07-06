@@ -1,8 +1,10 @@
 create.transects <- function(n) {
   
   n_segs <- 2
+  space <- 1000/n
+  start <- runif(1, max = space)
   
-  y.coords <- seq(1000/(n+1), 1000*n/(n+1), 1000/(n+1))
+  y.coords <- seq(start, 1000, space)
   legs <- as.character(1:n)
   
   lines <- data.frame(x   = c(rep(seq(0, 1000, len = n_segs), n)),

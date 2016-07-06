@@ -1,8 +1,17 @@
-#               --- DOUBLE OBSERVER DATA SIM FUNCTION: VERSION 1 ---
+#               --- DOUBLE OBSERVER DATA SIM FUNCTION: VERSION 2 ---
 
 double.obs.sim.mod <- function(region.obj, design.obj, pop.description.obj, detect.obj.1,
                                detect.obj.2, ddf.analyses.list, seed = 123456, 
                                plot=FALSE) {
+  # INPUTS:    region.obj          region object
+  #            design.obj          design object
+  #            pop.description     population description object
+  #            detect.1            detectability for first observer
+  #            detect.2            detectability for second observer
+  #            ddf.analyses.list   ddf analyses list object
+  #            seed                random seed
+  # OUTPUTS:   nested list of double observer data tables
+  # FUNCTIONS: make.simulation, create.survey.results, keyfct.hn
   
   set.seed(seed)
   
@@ -15,11 +24,13 @@ double.obs.sim.mod <- function(region.obj, design.obj, pop.description.obj, dete
   obs.table <- survey.results@obs.table@obs.table
   objects.1 <- unique(data$object)
   
+  
+  ## first observer objects detected by second observer
   det.probs <- mrds:::keyfct.hn(data$distance, detect.obj.2@scale.param)
   rand.numbs <- runif(length(det.probs))
   det.2 <- as.numeric(rand.numbs < det.probs)
   
-  ## as above, observer 2
+  ## simulation object and survery results for observer 2
   set.seed(seed)
   
   my.simulation.2 <- make.simulation(reps = 10, single.transect.set = TRUE,
@@ -36,7 +47,6 @@ double.obs.sim.mod <- function(region.obj, design.obj, pop.description.obj, dete
   all.objects <- data$object
   det.1 <- as.numeric(all.objects %in% objects.1)
   det.2 <- append(det.2, rep(1, length(det.1) - length(det.2)))
-  
   data <- data[rep(seq_len(nrow(data)), each=2),]
   detected <- c(rbind(det.1,det.2))
   
@@ -48,8 +58,6 @@ double.obs.sim.mod <- function(region.obj, design.obj, pop.description.obj, dete
   
   ## add region column to data
   data["Region.Label"] <- rep("study.area", length(data$object))
-  
-  
   obs.table <- obs.table[order(obs.table$Sample.Label),]
   region.table <- survey.results@region.table@region.table
   sample.table <- survey.results@sample.table@sample.table
@@ -60,6 +68,7 @@ double.obs.sim.mod <- function(region.obj, design.obj, pop.description.obj, dete
                  "sample.table" = sample.table,
                  "obs.table" = obs.table)
   
+  ## survey result plots
   if (plot == TRUE) {
     plot(survey.results)
     plot(survey.results.2)

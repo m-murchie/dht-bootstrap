@@ -124,7 +124,7 @@ plot(survey.results)
 ## transects and survey design
 source("R/create.transects.R")
 
-lines <- create.transects(n=20)
+lines <- create.transects(n=5)
 
 unlink("shapes/*")
 write.transects(lines, "shapes")

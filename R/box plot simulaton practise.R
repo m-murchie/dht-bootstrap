@@ -3,7 +3,7 @@
 # load parallel library
 library(parallel)
 
-n <- 3
+n <- 10
 
 seeds <- runif(n)*1e7
 
