@@ -15,7 +15,7 @@ pop.description <- make.population.description(N = 500, density.obj = pop.densit
                                                region = region, fixed.N = TRUE)
 
 tables <- double.obs.sim.mod.2(region, survey.design, pop.description, detect.1,
-                               detect.2, ddf.analyses)
+                               detect.2, ddf.analyses, plot = TRUE)
 
 
 ddf.model <- ddf(method = 'io.fi', mrmodel=~glm(link='logit', formula=~distance*
@@ -24,6 +24,7 @@ ddf.model <- ddf(method = 'io.fi', mrmodel=~glm(link='logit', formula=~distance*
 dht.results <- dht(ddf.model, tables$region.table, tables$sample.table, 
                    subset=1==1)
 
+ddf.model$Nhat
 dht.results
 
 boot.dht(tables, B=49, trunc=20, hist = TRUE)

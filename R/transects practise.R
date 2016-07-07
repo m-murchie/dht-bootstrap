@@ -52,8 +52,8 @@ pop.description <- make.population.description(N = 500, density.obj = pop.densit
 
 
 ## detectability and ddf analsyses
-detect <- make.detectability(key.function = "hn", scale.param = 15,
-                             truncation = 15)
+detect <- make.detectability(key.function = "hn", scale.param = 20,
+                             truncation = 20)
 
 ddf.analyses <- make.ddf.analysis.list(dsmodel = list(~cds(key = "hn",formula = ~1)),
                                        method = "ds", criteria = "AIC", 
@@ -124,7 +124,7 @@ plot(survey.results)
 ## transects and survey design
 source("R/create.transects.R")
 
-lines <- create.transects(n=5)
+lines <- create.transects(n=9, trunc = 20)
 
 unlink("shapes/*")
 write.transects(lines, "shapes")
